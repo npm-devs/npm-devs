@@ -5,6 +5,7 @@ import { Freights } from "./components/Freights";
 import { Num } from "./components/Num";
 import { ProvenanceChips } from "./components/Provenance";
 import { VehicleList } from "./components/VehicleList";
+import { VehicleNotePanel } from "./components/VehicleNote";
 import { horaLima } from "./format";
 import { usePolling } from "./usePolling";
 
@@ -34,6 +35,8 @@ export function App() {
   const poll = usePolling(readSnapshot, 2000);
   const freights = usePolling(readFreights, 5000);
   const [selected, setSelected] = useState<string | null>(null);
+  // Clave de notas del operador: solo en memoria, se pierde al recargar.
+  const [notesKey, setNotesKey] = useState<string | null>(null);
   const [view, setView] = useState<"operacion" | "fletes">("operacion");
   const snap = poll.data;
   const vehicles = snap?.fleet.data.vehiculos ?? [];
@@ -91,6 +94,7 @@ export function App() {
                     <dt>alertas abiertas</dt><dd><Num value={snap.fleet.data.alertas_abiertas} format={entero} /></dd>
                   </div>
                 </dl>
+                {selected && <VehicleNotePanel key={selected} alias={selected} notesKey={notesKey} onNotesKey={setNotesKey} />}
                 <VehicleList snapshot={snap} selected={selected} onSelect={setSelected} />
               </section>
               <section className="mapa" aria-label="Mapa">

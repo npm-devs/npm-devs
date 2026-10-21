@@ -26,6 +26,10 @@ npm run dev
 - Al elegir un tráiler la cámara vuela hasta él, se inclina a 60° mirando hacia donde va y lo sigue. Arrastrar o hacer zoom con la rueda suelta el seguimiento; "Seguir" lo retoma y "Ver flota" vuelve a la vista general. Con movimiento reducido, salta sin animar.
 - El camión se acuesta sobre la pista y escala a su tamaño real (~18 m) con zoom alto.
 
+## Nota revisada del operador (Atomic Memory, opcional)
+
+Al elegir un vehículo, si el backend tiene notas configuradas (ver `backend/README.md`), aparece la nota revisada del operador sobre ese vehículo. Pide la clave de notas del operador una vez por pestaña (solo queda en memoria); guardar exige marcar el consentimiento y se puede corregir o borrar. Sin configuración en el backend no aparece nada.
+
 ## Tests
 
 ```sh

@@ -1378,6 +1378,44 @@
         "title": "MetricasPeriodo",
         "type": "object"
       },
+      "NotaRevisada": {
+        "description": "Nota que el gestor de flota revisó y aceptó guardar sobre un vehículo (Atomic Memory).",
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "guardada_en": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Última vez que se guardó o corrigió (UTC), si la memoria la informa",
+            "title": "Guardada En"
+          },
+          "procedencia": {
+            "const": "human_reported",
+            "default": "human_reported",
+            "title": "Procedencia",
+            "type": "string"
+          },
+          "texto": {
+            "title": "Texto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alias",
+          "texto"
+        ],
+        "title": "NotaRevisada",
+        "type": "object"
+      },
       "Pasada": {
         "properties": {
           "consumo_observado_l": {
@@ -1618,6 +1656,29 @@
         "title": "ResumenFletes",
         "type": "object"
       },
+      "SaveVehicleNoteRequest": {
+        "properties": {
+          "consentimiento": {
+            "const": true,
+            "description": "El gestor revisó la nota y aceptó guardarla en Atomic Memory",
+            "title": "Consentimiento",
+            "type": "boolean"
+          },
+          "texto": {
+            "description": "Nota revisada por el gestor, sin datos personales",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Texto",
+            "type": "string"
+          }
+        },
+        "required": [
+          "texto",
+          "consentimiento"
+        ],
+        "title": "SaveVehicleNoteRequest",
+        "type": "object"
+      },
       "TimeRange": {
         "description": "Rango de tiempo de los datos, en hora del evento (UTC).",
         "properties": {
@@ -1831,6 +1892,32 @@
         "title": "VehicleMetrics",
         "type": "object"
       },
+      "VehicleNote": {
+        "description": "Nota revisada de un vehículo, en la memoria compartida del operador de la flota.\n\nCon `habilitada` en false la función está apagada en el servidor (y no se pide clave).",
+        "properties": {
+          "habilitada": {
+            "description": "Atomic Memory y NOTES_API_KEY configurados en el servidor",
+            "title": "Habilitada",
+            "type": "boolean"
+          },
+          "nota": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NotaRevisada"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "habilitada",
+          "nota"
+        ],
+        "title": "VehicleNote",
+        "type": "object"
+      },
       "VehicleStatus": {
         "properties": {
           "alias": {
@@ -2013,11 +2100,17 @@
         "in": "header",
         "name": "X-API-Key",
         "type": "apiKey"
+      },
+      "NotesKey": {
+        "description": "Clave del operador para las notas revisadas (variable NOTES_API_KEY); el dashboard la pide en pantalla",
+        "in": "header",
+        "name": "X-Notes-Key",
+        "type": "apiKey"
       }
     }
   },
   "info": {
-    "description": "Contrato de la Domain API con datos de ejemplo. Toda respuesta va en un sobre con procedencia, rango de tiempo (hora del evento, UTC) y hora de última actualización. Las rutas `/v1/tools/*` (MCP, Zavu y control del replay) exigen `X-API-Key`; las lecturas `/v1/*` del dashboard son públicas.",
+    "description": "Contrato de la Domain API con datos de ejemplo. Toda respuesta va en un sobre con procedencia, rango de tiempo (hora del evento, UTC) y hora de última actualización. Las rutas `/v1/tools/*` (MCP, Zavu y control del replay) exigen `X-API-Key`; las lecturas `/v1/*` del dashboard son públicas, salvo las notas revisadas (`/v1/vehicles/{alias}/note`, opcionales), que exigen `X-Notes-Key`.",
     "title": "Certera · Domain API",
     "version": "0.1.0"
   },
@@ -5870,6 +5963,243 @@
         "summary": "Métricas históricas de un vehículo por día o por viaje",
         "tags": [
           "dashboard (público)"
+        ]
+      }
+    },
+    "/v1/vehicles/{alias}/note": {
+      "delete": {
+        "operationId": "delete_vehicle_note",
+        "parameters": [
+          {
+            "description": "Alias del vehículo, p. ej. T07",
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "description": "Alias del vehículo, p. ej. T07",
+              "pattern": "^T\\d{2}$",
+              "title": "Alias",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "habilitada": true
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleNote"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "X-Notes-Key ausente o incorrecta"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Notas desactivadas o Atomic Memory sin respuesta: no se leyó, guardó ni borró"
+          }
+        },
+        "security": [
+          {
+            "NotesKey": []
+          }
+        ],
+        "summary": "Borrar la nota revisada (X-Notes-Key)",
+        "tags": [
+          "notas revisadas (Atomic Memory)"
+        ]
+      },
+      "get": {
+        "operationId": "read_vehicle_note",
+        "parameters": [
+          {
+            "description": "Alias del vehículo, p. ej. T07",
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "description": "Alias del vehículo, p. ej. T07",
+              "pattern": "^T\\d{2}$",
+              "title": "Alias",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "habilitada": true,
+                  "nota": {
+                    "alias": "T07",
+                    "guardada_en": "2020-04-14T03:30:00Z",
+                    "procedencia": "human_reported",
+                    "texto": "Sobreconsumo en Lima–Arequipa revisado: carga 4 t sobre lo declarado. Sin acción."
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleNote"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "X-Notes-Key ausente o incorrecta"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Notas desactivadas o Atomic Memory sin respuesta: no se leyó, guardó ni borró"
+          }
+        },
+        "security": [
+          {
+            "NotesKey": []
+          }
+        ],
+        "summary": "Nota revisada del operador sobre un vehículo (X-Notes-Key)",
+        "tags": [
+          "notas revisadas (Atomic Memory)"
+        ]
+      },
+      "put": {
+        "operationId": "save_vehicle_note",
+        "parameters": [
+          {
+            "description": "Alias del vehículo, p. ej. T07",
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "description": "Alias del vehículo, p. ej. T07",
+              "pattern": "^T\\d{2}$",
+              "title": "Alias",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveVehicleNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "habilitada": true,
+                  "nota": {
+                    "alias": "T07",
+                    "guardada_en": "2020-04-14T03:30:00Z",
+                    "procedencia": "human_reported",
+                    "texto": "Sobreconsumo en Lima–Arequipa revisado: carga 4 t sobre lo declarado. Sin acción."
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleNote"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "X-Notes-Key ausente o incorrecta"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description": "Notas desactivadas o Atomic Memory sin respuesta: no se leyó, guardó ni borró"
+          }
+        },
+        "security": [
+          {
+            "NotesKey": []
+          }
+        ],
+        "summary": "Guardar o corregir la nota revisada (X-Notes-Key y consentimiento)",
+        "tags": [
+          "notas revisadas (Atomic Memory)"
         ]
       }
     }

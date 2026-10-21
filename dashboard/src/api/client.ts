@@ -62,3 +62,49 @@ export async function readSnapshot(): Promise<Snapshot> {
   });
   return { fleet, replay, trips };
 }
+
+// Nota revisada (Atomic Memory, opcional): memoria compartida del operador de la flota. La clave de notas
+// la escribe el operador en pantalla y viaja en X-Notes-Key; nunca va en el build ni en el almacenamiento.
+export type VehicleNote = components["schemas"]["VehicleNote"];
+
+export class NoteError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+async function note(method: "GET" | "PUT" | "DELETE", alias: string, key: string | null, body?: unknown): Promise<VehicleNote> {
+  const headers: Record<string, string> = {};
+  if (key) headers["X-Notes-Key"] = key;
+  if (body) headers["Content-Type"] = "application/json";
+  const res = await fetch(`${API_URL}/v1/vehicles/${encodeURIComponent(alias)}/note`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const json: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    const detail = json && typeof json === "object" && "detail" in json && typeof json.detail === "string"
+      ? json.detail : `HTTP ${res.status}`;
+    throw new NoteError(detail, res.status);
+  }
+  return parseVehicleNote(json);
+}
+
+function parseVehicleNote(value: unknown): VehicleNote {
+  if (value && typeof value === "object" && "habilitada" in value && typeof value.habilitada === "boolean" && "nota" in value) {
+    if (value.nota === null) return { habilitada: value.habilitada, nota: null };
+    const stored = value.nota;
+    if (stored && typeof stored === "object" && "alias" in stored && typeof stored.alias === "string"
+      && "texto" in stored && typeof stored.texto === "string" && "procedencia" in stored && stored.procedencia === "human_reported"
+      && "guardada_en" in stored && (stored.guardada_en === null || typeof stored.guardada_en === "string")) {
+      return { habilitada: value.habilitada, nota: { alias: stored.alias, texto: stored.texto, procedencia: "human_reported", guardada_en: stored.guardada_en } };
+    }
+  }
+  throw new NoteError("No se pudo leer la nota: respuesta inválida del servidor", 502);
+}
+
+export const readVehicleNote = (alias: string, key: string | null) => note("GET", alias, key);
+export const saveVehicleNote = (alias: string, key: string, texto: string) =>
+  note("PUT", alias, key, { texto, consentimiento: true });
+export const deleteVehicleNote = (alias: string, key: string) => note("DELETE", alias, key);

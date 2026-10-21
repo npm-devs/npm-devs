@@ -341,3 +341,39 @@ h3 { font-size: var(--cuadra-t-label); font-family: var(--cuadra-mono); font-wei
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* --------------------------------------------------------------------- nota revisada (Atomic Memory) */
+.nota {
+  display: grid; gap: 10px; margin: 0 0 var(--cuadra-s-2); padding: 14px 16px;
+  background: var(--cuadra-tinta-2); border: 1px solid var(--cuadra-linea-fuerte); border-radius: var(--cuadra-radio);
+  animation: entra var(--cuadra-dur-medio) var(--cuadra-ease-asiento) both;
+}
+.nota-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; justify-content: space-between; }
+.nota h3 { white-space: nowrap; }
+.nota h3 { margin: 0; font-family: var(--cuadra-display); font-size: 14px; font-weight: 700; }
+.nota-texto { margin: 0; font-size: 14px; line-height: 1.5; color: var(--cuadra-fg); white-space: pre-wrap; }
+.nota-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nota-acciones .dato { margin-right: auto; }
+.nota button {
+  padding: 6px 12px; border-radius: 999px; cursor: pointer; border: 1px solid var(--cuadra-linea-fuerte);
+  background: var(--cuadra-tinta-3); color: var(--cuadra-fg); font: 500 12px var(--cuadra-mono);
+}
+.nota button:hover:not(:disabled) { border-color: var(--cuadra-sello); color: var(--cuadra-sello); }
+.nota button[type="submit"]:not(:disabled) { background: var(--cuadra-sello); color: var(--cuadra-sobre-acento); border-color: var(--cuadra-sello); }
+.nota button:disabled { opacity: .45; cursor: not-allowed; }
+.nota-form { display: grid; gap: 10px; }
+.nota-form label { display: grid; gap: 6px; }
+.nota textarea {
+  width: 100%; resize: vertical; padding: 10px 12px; border-radius: var(--cuadra-radio-s);
+  background: var(--cuadra-tinta-pozo); border: 1px solid var(--cuadra-linea-fuerte); color: var(--cuadra-fg); font: 14px/1.5 var(--cuadra-body);
+}
+.nota textarea:focus { outline: none; border-color: var(--cuadra-sello-borde); }
+.nota-consentimiento { display: flex !important; grid-auto-flow: column; align-items: center; gap: 8px; font-size: 13px; color: var(--cuadra-fg-dim); }
+.nota-consentimiento input { accent-color: var(--cuadra-sello); }
+.nota-error { margin: 0; font-size: 13px; color: var(--cuadra-rechazo); }
+.nota input[type="password"] {
+  flex: 1; min-width: 0; padding: 6px 12px; border-radius: 999px;
+  background: var(--cuadra-tinta-pozo); border: 1px solid var(--cuadra-linea-fuerte); color: var(--cuadra-fg); font: 13px var(--cuadra-mono);
+}
+.nota input[type="password"]:focus { outline: none; border-color: var(--cuadra-sello-borde); }
+.nota .nota-bloquear { margin-left: auto; }

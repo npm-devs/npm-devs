@@ -45,6 +45,25 @@ Ids de ejemplo: vehículos `T03`, `T07`, `T28`, `T04`, `T22`, `T09`; viajes `V-0
 - Las lecturas `/v1/*` son públicas.
 - CORS (ADR 0011): `CORS_ORIGINS` (lista separada por comas) más cualquier `https://*.vercel.app` (previews); permite el header `X-API-Key`.
 
+### Notas revisadas (Atomic Memory, opcional)
+
+El operador puede dejar una nota revisada por vehículo (p. ej. "sobreconsumo de T07 explicado por carga extra") y el dashboard la vuelve a mostrar al elegir ese vehículo. Se guarda en [Atomic Memory](https://docs.atomicstrata.ai) y nunca entra en la línea base, el sobreconsumo ni las alertas.
+
+| Variable | Uso |
+|---|---|
+| `ATOMICMEMORY_API_URL` | URL HTTPS de Atomic Memory / atomicmemory-core (sin `/v1`; HTTP solo en loopback, sin credenciales en la URL) |
+| `ATOMICMEMORY_API_KEY` | Clave del proyecto (`Authorization: Bearer`), solo en el servidor |
+| `ATOMICMEMORY_SUBJECT` | Sujeto de la memoria, p. ej. `certera-flota-demo`. Lo fija el servidor; el navegador no lo elige |
+| `NOTES_API_KEY` | Clave del operador para leer, guardar y borrar notas (`X-Notes-Key`). Usa una distinta de `API_KEY` |
+| `ATOMICMEMORY_TIMEOUT_MS` | Tiempo máximo por llamada (por defecto 2500, acotado entre 100 y 5000) |
+
+- Sin `ATOMICMEMORY_API_URL`, `ATOMICMEMORY_SUBJECT` o `NOTES_API_KEY`, `GET /v1/vehicles/{alias}/note` responde `habilitada: false` y el dashboard no muestra nada.
+- Es **memoria compartida del operador de la flota**: un solo sujeto por despliegue, protegido con `NOTES_API_KEY`. No separa notas por persona. El dashboard pide la clave en pantalla y la guarda solo en memoria de la pestaña; no va en variables `VITE_*`.
+- `GET`/`PUT`/`DELETE /v1/vehicles/{alias}/note` exigen `X-Notes-Key` (401 si falta o es incorrecta). `PUT` exige además `consentimiento: true` y corrige la nota en su lugar (ingesta verbatim con `metadata.externalId`); `DELETE` la borra por id.
+- Si Atomic Memory falla, tarda más del límite o devuelve algo inválido, la API responde 503 con "No se guardó/leyó/borró la nota" y el resto de la API sigue igual.
+- Los redireccionamientos del proveedor se rechazan para evitar reenviar la credencial. El borrado se confirma leyendo de nuevo hasta obtener ausencia.
+- Tests: `tests/test_vehicle_notes.py` usa `tests/fake_atomicmemory.py`, un **fixture HTTP local** que imita las rutas de atomicmemory-core; no es el servicio real.
+
 ### Regenerar contrato y tipos
 
 ```sh

@@ -310,6 +310,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/vehicles/{alias}/note": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Nota revisada del operador sobre un vehículo (X-Notes-Key) */
+        get: operations["read_vehicle_note"];
+        /** Guardar o corregir la nota revisada (X-Notes-Key y consentimiento) */
+        put: operations["save_vehicle_note"];
+        post?: never;
+        /** Borrar la nota revisada (X-Notes-Key) */
+        delete: operations["delete_vehicle_note"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -926,6 +945,27 @@ export interface components {
              */
             vs_pares_pct: number | null;
         };
+        /**
+         * NotaRevisada
+         * @description Nota que el gestor de flota revisó y aceptó guardar sobre un vehículo (Atomic Memory).
+         */
+        NotaRevisada: {
+            /** Alias */
+            alias: string;
+            /**
+             * Guardada En
+             * @description Última vez que se guardó o corrigió (UTC), si la memoria la informa
+             */
+            guardada_en?: string | null;
+            /**
+             * Procedencia
+             * @default human_reported
+             * @constant
+             */
+            procedencia: "human_reported";
+            /** Texto */
+            texto: string;
+        };
         /** Pasada */
         Pasada: {
             /** Consumo Observado L */
@@ -1032,6 +1072,20 @@ export interface components {
             /** Toneladas */
             toneladas: number;
         };
+        /** SaveVehicleNoteRequest */
+        SaveVehicleNoteRequest: {
+            /**
+             * Consentimiento
+             * @description El gestor revisó la nota y aceptó guardarla en Atomic Memory
+             * @constant
+             */
+            consentimiento: true;
+            /**
+             * Texto
+             * @description Nota revisada por el gestor, sin datos personales
+             */
+            texto: string;
+        };
         /**
          * TimeRange
          * @description Rango de tiempo de los datos, en hora del evento (UTC).
@@ -1132,6 +1186,20 @@ export interface components {
             hasta: string;
             /** @description Totales del rango; clave = 'total' */
             resumen: components["schemas"]["MetricasPeriodo"];
+        };
+        /**
+         * VehicleNote
+         * @description Nota revisada de un vehículo, en la memoria compartida del operador de la flota.
+         *
+         *     Con `habilitada` en false la función está apagada en el servidor (y no se pide clave).
+         */
+        VehicleNote: {
+            /**
+             * Habilitada
+             * @description Atomic Memory y NOTES_API_KEY configurados en el servidor
+             */
+            habilitada: boolean;
+            nota: components["schemas"]["NotaRevisada"] | null;
         };
         /** VehicleStatus */
         VehicleStatus: {
@@ -4806,6 +4874,187 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_vehicle_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Alias del vehículo, p. ej. T07 */
+                alias: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "habilitada": true,
+                     *       "nota": {
+                     *         "alias": "T07",
+                     *         "guardada_en": "2020-04-14T03:30:00Z",
+                     *         "procedencia": "human_reported",
+                     *         "texto": "Sobreconsumo en Lima–Arequipa revisado: carga 4 t sobre lo declarado. Sin acción."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VehicleNote"];
+                };
+            };
+            /** @description X-Notes-Key ausente o incorrecta */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Notas desactivadas o Atomic Memory sin respuesta: no se leyó, guardó ni borró */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    save_vehicle_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Alias del vehículo, p. ej. T07 */
+                alias: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveVehicleNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "habilitada": true,
+                     *       "nota": {
+                     *         "alias": "T07",
+                     *         "guardada_en": "2020-04-14T03:30:00Z",
+                     *         "procedencia": "human_reported",
+                     *         "texto": "Sobreconsumo en Lima–Arequipa revisado: carga 4 t sobre lo declarado. Sin acción."
+                     *       }
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VehicleNote"];
+                };
+            };
+            /** @description X-Notes-Key ausente o incorrecta */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Notas desactivadas o Atomic Memory sin respuesta: no se leyó, guardó ni borró */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_vehicle_note: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Alias del vehículo, p. ej. T07 */
+                alias: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "habilitada": true
+                     *     }
+                     */
+                    "application/json": components["schemas"]["VehicleNote"];
+                };
+            };
+            /** @description X-Notes-Key ausente o incorrecta */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Notas desactivadas o Atomic Memory sin respuesta: no se leyó, guardó ni borró */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };

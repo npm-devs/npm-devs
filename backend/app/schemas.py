@@ -306,3 +306,27 @@ class Corredor(BaseModel):
 
 class CorridorList(BaseModel):
     corredores: list[Corredor]
+
+
+class NotaRevisada(BaseModel):
+    """Nota que el gestor de flota revisó y aceptó guardar sobre un vehículo (Atomic Memory)."""
+
+    alias: str
+    texto: str
+    procedencia: Literal[Provenance.human_reported] = Provenance.human_reported
+    guardada_en: AwareDatetime | None = Field(None, description="Última vez que se guardó o corrigió (UTC), si la memoria la informa")
+
+
+class VehicleNote(BaseModel):
+    """Nota revisada de un vehículo, en la memoria compartida del operador de la flota.
+
+    Con `habilitada` en false la función está apagada en el servidor (y no se pide clave).
+    """
+
+    habilitada: bool = Field(description="Atomic Memory y NOTES_API_KEY configurados en el servidor")
+    nota: NotaRevisada | None
+
+
+class SaveVehicleNoteRequest(BaseModel):
+    texto: str = Field(min_length=1, max_length=500, description="Nota revisada por el gestor, sin datos personales")
+    consentimiento: Literal[True] = Field(description="El gestor revisó la nota y aceptó guardarla en Atomic Memory")
